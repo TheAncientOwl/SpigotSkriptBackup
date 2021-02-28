@@ -1,0 +1,124 @@
+#AntiSwear
+#Dev: TheAncientOwl aka Bufnita
+#Version: 0.3
+#Fixes: if a word is already in a list, it isn't added again.
+options:
+	Prefix: &8[&cAnti&fSwear&8]
+	HelpPrefix: &8&l[&c&lAnti&f&lSwear &e&lHelp&8&l]
+	CmdP: &3&l>>
+	Pattern: [banned/repl]
+	BWords: &8[&4Banned &fwords&8]&7&l >>&f
+	RList: &8[&eReplacement &flist&8]&7&l >>&f
+	BList: the &o""banned words""
+	ReList: the &o""replacement list""
+	Permission: as.admin
+	BypassPermission: as.bypass
+	Color1: &7
+	Color2: &8&l
+	Color3: &3
+	BColor: &4
+	RColor: &e
+	NewLine: &8&l-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-
+	
+command /antiswear [<text>] [<text>] [<text>]:
+	permission: {@Permission}
+	permission message: You do not have acces to this command!
+	aliases: /as
+	usage: /as [sub command] [text]
+	trigger:
+		if arg 1 is not set:
+			send "{@Color2}-=-=-=-=-=-=-=-=-=-"
+			send "    {@HelpPrefix}"
+			send "&8&l[&3&l!&8&l] &c/as:"
+			send "{@CmdP} {@Color1}list {@Color3}{@Pattern}"
+			send "{@CmdP} {@Color1}add {@Color3}{@Pattern}"
+			send "{@CmdP} {@Color1}remove {@Color3}{@Pattern}"
+			send "{@CmdP} {@Color1}toggle {@Color3}[on/off]"
+			send "{@CmdP} {@Color1}reload"
+			send "{@CmdP} {@Color1}del {@Color3}{@Pattern}"
+			send "{@CmdP} &7&o(delete the entire list)"
+			send "{@Color2}-=-=-=-=-=-=-=-=-=-"
+		if arg 1 is "list":
+			if arg 2 is "banned":
+				send "&r"
+				send "{@NewLine}"
+				send "{@BWords} %{swear_list::*}%"
+				send "&r"
+			else:
+				if arg 2 is "repl":
+					send "{@NewLine}"
+					send "{@RList} %{replace_list::*}%"
+					send "&r"
+		if arg 1 is "add":
+			if arg 2 is "banned":
+				if {swear_list::*} contains arg 3:
+					send "{@NewLine}"
+					send "{@Prefix} {@BColor}%arg 3% {@Color1}is already banned."
+				else:
+					send "{@NewLine}"
+					send "{@Prefix} {@BColor}%arg 3% {@Color1}added to {@BList}."
+					send "&r"
+					add arg 3 to {swear_list::*}
+			else: 
+				if arg 2 is "repl":
+					if {replace_list::*} contains arg 3:
+						send "{@NewLine}"
+						send "{@Prefix} {@RColor}%arg 3% {@Color1}is already added to {@ReList}."
+					else:
+						send "{@NewLine}"
+						send "{@Prefix} {@RColor}%arg 3% {@Color1}added to {@ReList}."
+						send "&r"
+						add arg 3 to {replace_list::*}
+		if arg 1 is "remove":
+			if arg 2 is "banned":
+				send "{@NewLine}"
+				send "{@Prefix} {@BColor}%arg 3% {@Color1}removed from {@BList}."
+				remove arg 3 from {swear_list::*}
+			else:
+				if arg 2 is "repl":
+					send "{@NewLine}"
+					send "{@Prefix} {@RColor}%arg 3% {@Color1}removed from {@ReList}."
+					remove arg 3 from {replace_list::*}
+		if arg 1 is "toggle":
+			if arg 2 is "on":
+				send "{@Prefix} {@Color1}Toggled on."
+				set {swearing} to "disabled"
+			else:
+				if arg 2 is "off":
+					send "{@Prefix} {@Color1}Toggled off."
+					set {swearing} to "enabled"
+		if arg 1 is "reload":
+			send "{@Prefix} {@Color1}Skript reloaded."
+			make console execute command "skript reload AntiSwear.sk"
+		if arg 1 is "del":
+			if arg 2 is "banned":
+				send "{@Prefix} {@Color1}{@BList} list was deleted."
+				delete {swear_list::*}
+			else:
+				if arg 2 is "repl":
+					send "{@Prefix} {@Color1}{@ReList} was deleted."
+					delete {replace_list::*}
+
+on chat:
+	if {swearing} is "disabled":
+		if player does not have permission "{@BypassPermission}":
+			set {_var} to "%random integer between 1 and size of {replace_list::*}%"
+			replace all {swear_list::*} with {replace_list::%{_var}%} in the message
+			wait 1 tick
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

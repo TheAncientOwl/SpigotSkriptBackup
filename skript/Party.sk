@@ -1,0 +1,521 @@
+#Party
+#Dev: Bufnita aka TheAncientOwl
+#Version 2.0
+options:
+	Prefix: [Party]
+	MainColor: b
+	TabFormat: &8 [{partyColor}{party}&8]
+	UsePartyNick: true
+	PartyCost-Create: 1000
+	PartyCost-Rename: 500
+	PartyCost-ReColor: 250
+	BanDarkRedColorForParty: true
+	MaxPartyNameLength: 12
+	PartyChatFormat: &8[{color}{rank}&8]{color}{name} {chatColor}{message}
+	Msg-RequestRecive: {player} invited you to join their party!
+	Msg-RequestSend: You invited {player} to join your party!
+	Msg-PartyJoin: {player} joined the party!
+	Msg-PartyLeave: {player} leaved the party
+	Msg-PartyKickBc: &c&l{player} has been kicked from party!
+	Msg-PartyKickRecive: &c&lYou have been kicked from party!
+	Msg-NeedPartyToPerform: &c&lYou must be in a party to perform this command!
+	Msg-NoPerm: &c&lYou don't have the permission to perform this command!
+	Msg-NewDesc: The Party description was changed!
+	Msg-NotEnoughMoney: &c&lYou need &2&l{money}$ &c&lto do this!
+	Msg-PartyColorChanged: You changed party's color!
+	Msg-NoHomeYet: &c&lYour party has no home yet!
+	Msg-NotInYourParty: &c&lThis player is not party of your party!
+		
+command /p <text>:
+	trigger:
+		if {%uuid of player%.party} is not set:
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+			stop
+		set {_message} to arg 1
+		replace all " " with " &{@MainColor}" in {_message}
+		set {_partyChat} to "&{@MainColor}{@Prefix} {@PartyChatFormat}"
+		replace all "{message}" with {_message} in {_partyChat}
+		if {%uuid of player%.nick} is set:
+			replace all "{name}" with {%uuid of player%.nick} in {_partyChat}
+		else:
+			replace all "{name}" with player's name in {_partyChat}
+	
+		replace all "{rank}" with {%uuid of player%.rank} in {_partyChat}
+		replace all "{chatColor}" with "&{@MainColor}" in {_partyChat}
+	
+		if {%uuid of player%.rank} is "Member":
+			replace all "{color}" with "&{@MainColor}" in {_partyChat}
+		else:
+			if {%uuid of player%.rank} is "Moderator":
+				replace all "{color}" with "&c" in {_partyChat}
+			else:
+				replace all "{color}" with "&4" in {_partyChat}
+				
+		partyBroadcast({%uuid of player%.party}, {_partyChat})
+	
+command /partydesc <text>:
+	trigger:
+		if {%uuid of player%.party} is not set:
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+			stop
+		if {%uuid of player%.rank} is not "Leader":
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NoPerm}"
+			stop
+		set {_party} to {%uuid of player%.party}
+		set {%{_party}%.description} to arg 1
+		set {_message} to "&{@MainColor}&l{@Prefix} {@Msg-NewDesc}"
+		partyBroadcast({%uuid of player%.party}, {_message})
+
+command /partyedit [<text>] [<text>]:
+	trigger:
+		if {%uuid of player%.party} is not set:
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+			stop
+		if {%uuid of player%.rank} is not "Leader":
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NoPerm}"
+			stop
+		if arg 1 is "color":
+			if player's balance < {@PartyCost-ReColor}:
+				set {_msg} to "{@Msg-NotEnoughMoney}"
+				replace all "{money}" with "{@PartyCost-ReColor}" in {_msg}
+				send "&{@MainColor}&l{@Prefix}%{_msg}%"
+				stop
+			if arg 2 is not set:
+				send "&{@MainColor}&l{@Prefix}&c&lYou need to choose a color: &00&11&22&33&44&55&66&77&88&99&aa&ee&bb&cc&dd&ff &c&l!"
+				stop
+			if {colors::*} does not contain arg 2:
+				send "&{@MainColor}&l{@Prefix}&c&lYou need to choose a color: &00&11&22&33&44&55&66&77&88&99&aa&ee&bb&cc&dd&ff &c&l!"
+				stop
+			if arg 2' length > 1:
+				send "&{@MainColor}&l{@Prefix}&c&lYou need to choose a color: &00&11&22&33&44&55&66&77&88&99&aa&ee&bb&cc&dd&ff &c&l!"
+				stop
+			if arg 2 is "4":
+				if {@BanDarkRedColorForParty} is true:
+					if player does not have permission "party.useColor.darkRed":
+						send "&{@MainColor}&l{@Prefix}&4&lYou don't have the permission to use this color!"
+						stop
+			make console execute command "eco take %player% {@PartyCost-ReColor}"
+			set {_party} to {%uuid of player%.party}
+			set {%{_party}%.color} to "&%arg 2%"
+			
+			set {_suffix} to "{@TabFormat}"
+			replace all "{partyColor}" with "%{%{_party}%.color}%" in {_suffix}
+			replace all "{party}" with "%{_party}%" in {_suffix}
+			loop {%{_party}%.members::*}:
+				make console execute command "nte player %loop-value% suffix %{_suffix}%"
+			send "&{@MainColor}&l{@Prefix} &{@MainColor}&l{@Msg-PartyColorChanged}"
+			stop
+		if arg 1 is "name":
+			if player's balance < {@PartyCost-Rename}:
+				set {_msg} to "{@Msg-NotEnoughMoney}"
+				replace all "{money}" with "{@PartyCost-Rename}" in {_msg}
+				send "&{@MainColor}&l{@Prefix}%{_msg}%"
+				stop
+			if text arg 2 is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l/partyEdit name <name>!"
+				stop
+			if text arg 2' length > {@MaxPartyNameLength}:
+				send "&{@MainColor}&l{@Prefix}&c&lMax length is {@MaxPartyNameLength}"
+				stop
+			set {_x} to text arg 2
+			if {_x} contain "&":
+				send "&{@MainColor}&l{@Prefix}&c&lYou can't use &b&l&l'&' &c&lin party's name!"
+				stop
+			set {_x} to lowerCase({_x})
+			if {party.list::*} contains "%{_x}%":
+				send "&{@MainColor}&l{@Prefix}&c&lName already in use!"
+				stop
+			make console execute command "eco take %player% {@PartyCost-Rename}"
+			remove lowerCase({%uuid of player%.party}) from {party.list::*}
+			add {_x} to {party.list::*}
+			set {_party} to {%uuid of player%.party}
+			set {%arg 2%.members::*} to {%{_party}%.members::*}
+			set {%arg 2%.description} to {%{_party}%.description}
+			set {%arg 2%.color} to {%{_party}%.color}
+			set {%arg 2%.home} to {%{_party}%.home}
+			loop {%{_party}%.members::*}:
+				set {%uuid of loop-value%.party} to arg 2
+				set {_suffix} to "{@TabFormat}"
+				replace all "{partyColor}" with "%{%arg 2%.color}%" in {_suffix}
+				replace all "{party}" with arg 2 in {_suffix}
+				make console execute command "nte player %loop-value% suffix %{_suffix}%"
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&lThe party's name was changed!" to loop-value
+			clear {%{_party}%.description}
+			clear {%{_party}%.color}
+			clear {%{_party}%.home}
+			clear {%{_party}%.members::*}
+			stop
+		send "&{@MainColor}&l{@Prefix}&{@MainColor}&l/party help!"
+on command:
+	if full command is "cl":
+		cancel event
+		clear {%player%.party}
+		clear {%player%.rank}
+		
+command /partyAdmin [<text>] [<player>]:
+	trigger:
+		if player does not have permission "party.admin":
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NoPerm}"
+			stop
+		if arg 1 is "help":
+			send "&4&l-=-=-=--=-=-=- Party Admin Help -=-=-=--=-=-=-"
+			send "&4&l/partyAdmin &8&lpartySpy"
+			send "&4&l/partyAdmin &8&lreload"
+			send "&4&l/partyAdmin &8&ldisband &3<name of player which party you wanna disband>"
+			stop
+		if arg 1 is "reload":
+			make player execute command "skript reload Party"
+			stop
+		if arg 1 is "partyspy":
+			if {%uuid of player%.spy} is false:
+				set {%uuid of player%.spy} to true
+				send "&8&l[&4&lParty&8&l] &3&lParty spy toggled &2&lon&3&l!"
+			else:
+				set {%uuid of player%.spy} to false
+				send "&8&l[&4&lParty&8&l] &3&lParty spy toggled &4&loff&3&l!"
+			stop
+		if arg 1 is "disband":
+			if arg 2 is not set:
+				send "&{@MainColor}&l{@Prefix}&4&l/partyAdmin help!"
+				stop
+			party_disband(arg 2)
+			send "&8&l[&4&lParty&8&l] &3&lYou disbanded %arg 2%'s party!"
+			stop
+		send "&{@MainColor}&l{@Prefix}&4&l/partyAdmin help!"
+		
+command /party [<text>] [<player>] [<text>]:
+	trigger:
+		if arg 1 is "help":
+			send "&{@MainColor}&l-=-=-=--=-=-=- Party Help &{@MainColor}&l-=-=-=--=-=-=-"
+			send "&{@MainColor}/party help"
+			send "&{@MainColor}/party create <name>"
+			send "&{@MainColor}/party accept"
+			send " "
+			if {%uuid of player%.party} is set:
+				send "&{@MainColor}/p <message>"
+				send "&{@MainColor}/party leave"
+				send "&{@MainColor}/party info"
+				send "&{@MainColor}/party home"
+				send " "
+			if {%uuid of player%.rank} is "Moderator":
+				send "&{@MainColor}/party kick <player>"
+				send "&{@MainColor}/party invite <player>"
+				send "&{@MainColor}/party nick <player> <nickname>/<off>"
+				send " "
+			if {%uuid of player%.rank} is "Leader":
+				send "&{@MainColor}/party invite <player>"
+				send "&{@MainColor}/party kick <player>"
+				send "&{@MainColor}/party sethome"
+				send "&{@MainColor}/party nick <player> <nickname>/<off>"
+				send "&{@MainColor}/party rank <player> <Member/Moderator/Leader>"
+				send " "
+				send "&{@MainColor}/partydesc (add a description for party)"
+				send "&{@MainColor}/partyEdit name <name> (&2{@PartyCost-Rename}$&{@MainColor})"
+				send "&{@MainColor}/partyEdit color <code> (&00&11&22&33&44&55&66&77&88&99&aa&ee&bb&cc&dd&ff&{@MainColor}) (&2{@PartyCost-ReColor}$&{@MainColor})"
+				send " "
+			if player have permission "party.admin":
+				send "&4&l/partyAdmin help"
+				send " "
+			stop
+		if arg 1 is "info":
+			if {%uuid of player%.party} is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+				stop
+			set {_party} to {%uuid of player%.party}
+			send "&{@MainColor}&l-=-=-=-=-=-=-=- %{%{_party}%.color}%&l%{_party}% &{@MainColor}&l-=-=-=-=-=-=-=-"
+			send "&{@MainColor}Description: %{%{_party}%.description}%"
+			loop {%{_party}%.members::*}:
+				set {_uuid} to uuid of loop-value
+				if {%{_uuid}%.rank} is "Member":
+					add loop-value to {_members::*}
+					set {_okme} to true
+				else:
+					if {%{_uuid}%.rank} is "Moderator":
+						add loop-value to {_mods::*}
+						set {_okmo} to true
+					else:
+						if {%{_uuid}%.rank} is "Leader":
+							set {_leader} to loop-value
+			if {_okmo} is not true:
+				add "-" to {_mods::*}
+			if {_okme} is not true:
+				add "-" to {_members::*}
+			send "&4Leader: %{_leader}%"
+			send "&cMods: %{_mods::*}%"
+			send "&{@MainColor}Members: %{_members::*}%"
+			stop
+		if arg 1 is "home":
+			if {%uuid of player%.party} is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+				stop
+			set {_party} to {%uuid of player%.party}
+			if {%{_party}%.home} is not set:
+				send "&{@MainColor}&l{@Prefix}{@Msg-NoHomeYet}"
+				stop
+			teleport player to {%{_party}%.home}
+			stop
+		if arg 1 is "nick":
+			if {%uuid of player%.party} is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+				stop
+			if {%uuid of player%.rank} is "Member":
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NoPerm}"
+				stop
+			if {%uuid of player%.party} != {%uuid of arg 2%.party}:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NotInYourParty}"
+				stop
+			if {%uuid of arg 2%.rank} is "Leader":
+				if {%uuid of player%.rank} is not "Leader":
+					send "&{@MainColor}&l{@Prefix}&4&lOnly the leader can change his nickname!"
+					stop
+			if arg 3 is "off":
+				clear {%uuid of arg 2%.nick}
+			else:
+				set {%uuid of arg 2%.nick} to arg 3
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&lNick Changed!"
+			stop
+		if arg 1 is "leave":
+			if {%uuid of player%.party} is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+				stop
+			set {_msg} to "&{@MainColor}&l{@Prefix}{@Msg-PartyLeave}"
+			replace all "{player}" with player's name in {_msg}
+			partyBroadcast({%uuid of player%.party}, {_msg})
+			set {_msg} to "&{@MainColor}&l{@Prefix}{@Msg-PartyLeave}"
+			replace all "{player}" with "You" in {_msg}
+			send "%{_msg}%"
+			party_leave(player)
+			stop
+		if arg 1 is "invite":
+			if {%uuid of player%.party} is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+				stop
+			if {%uuid of player%.rank} is "Member":
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NoPerm}"
+				stop
+			if {%uuid of arg 2%.party} is set:
+				send "&{@MainColor}&l{@Prefix}&c&lThis player is already in a party!"
+				stop
+			set {%uuid of arg 2%.invited} to {%uuid of player%.party}
+			set {_msg} to "{@Msg-RequestRecive}"
+			replace all "{player}" with player's name in {_msg}
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l%{_msg}%" to arg 2
+			set {_msg} to "{@Msg-RequestSend}"
+			replace all "{player}" with "%arg 2%" in {_msg}
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l%{_msg}%"
+			stop
+		if arg 1 is "accept":
+			if {%uuid of player%.invited} is not set:
+				send "&{@MainColor}&l{@Prefix}&c&lYou have no invitation yet!"
+				stop
+			set {%uuid of player%.party} to {%uuid of player%.invited}
+			set {%uuid of player%.rank} to "Member"
+			clear {%uuid of player%.invited}
+			delete {%uuid of player%.invited}
+			add player to {%{%uuid of player%.party}%.members::*}
+			set {_party} to {%uuid of player%.party}
+			set {_suffix} to "{@TabFormat}"
+			replace all "{partyColor}" with "%{%{_party}%.color}%" in {_suffix}
+			replace all "{party}" with "%{_party}%" in {_suffix}
+			make console execute command "nte player %player% suffix %{_suffix}%"
+			set {_msg} to "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-PartyJoin}"
+			replace all "{player}" with player's name in {_msg}
+			partyBroadcast({_party}, {_msg})
+			stop
+		if arg 1 is "kick":
+			if {%uuid of player%.party} is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+				stop
+			if {%uuid of player%.rank} is "Member":
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NoPerm}"
+				stop
+			if {%uuid of arg 2%.party} != {%uuid of player%.party}:
+				send "&{@MainColor}&l{@Prefix}{@Msg-NotInYourParty}"
+				stop
+			if {%uuid of arg 2%.rank} = "Leader":
+				send "&{@MainColor}&l{@Prefix}&4&lYou can't kick the Leader!"
+				stop
+			set {_party} to {%uuid of player%.party}
+			party_leave(arg 2)
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-PartyKickRecive}" to arg 2
+			set {_msg} to "&{@MainColor}&l{@Prefix}{@Msg-PartyKickBc}"
+			replace all "{player}" with "%arg 2%" in {_msg}
+			partyBroadcast({_party}, {_msg})
+			
+			stop
+		if arg 1 is "rank":
+			if {%uuid of player%.party} is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+				stop
+			if {%uuid of player%.rank} is not "Leader":
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NoPerm}"
+				stop
+			if {%uuid of player%.party} != {%uuid of arg 2%.party}:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NotInYourParty}"
+				stop
+			if arg 3 is not "Leader":
+				if {%uuid of arg 2%.rank} is "Leader":
+					send "&{@MainColor}&l{@Prefix}&4&lYou can't do this..."
+					stop
+				if arg 3 is "Moderator":
+					set {%uuid of arg 2%.rank} to "Moderator"
+					stop
+				set {%uuid of arg 2%.rank} to "Member"
+				stop
+			set {%uuid of arg 2%.rank} to "Leader"
+			set {%uuid of player%.rank} to "Moderator"
+			partyBroadcast({%uuid of player%.party}, "&{@MainColor}&l{@Prefix}&{@MainColor}&lThe Party has a new Leader!")
+			stop
+		if arg 1 is "sethome":
+			if {%uuid of player%.party} is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NeedPartyToPerform}"
+				stop
+			if {%uuid of player%.rank} is not "Leader":
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l{@Msg-NoPerm}"
+				stop
+			set {_party} to {%uuid of player%.party}
+			set {%{_party}%.home} to player's location
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&lParty home was set!"
+			stop
+		if arg 1 is "create":
+			if {%uuid of player%.party} is set:
+				send "&{@MainColor}&l{@Prefix}&c&lYou are already in a party!"
+				stop
+			if player's balance < {@PartyCost-Create}:
+				set {_msg} to "{@Msg-NotEnoughMoney}"
+				replace all "{money}" with "{@PartyCost-Create}" in {_msg}
+				send "&{@MainColor}&l{@Prefix}%{_msg}%"
+				stop
+			if text arg 2 is not set:
+				send "&{@MainColor}&l{@Prefix}&{@MainColor}&l/party create <name>!"
+				stop
+			if text arg 2' length > {@MaxPartyNameLength}:
+				send "&{@MainColor}&l{@Prefix}&c&lMax length is {@MaxPartyNameLength}"
+				stop
+			set {_x} to text arg 2
+			if {_x} contain "&":
+				send "&{@MainColor}&l{@Prefix}&c&lYou can't use &b&l&l'&' &c&lin party's name!"
+				stop
+			set {_x} to lowerCase({_x})
+			if {party.list::*} contains "%{_x}%":
+				send "&{@MainColor}&l{@Prefix}&c&lName already in use!"
+				stop
+			set {%uuid of player%.creating} to true
+			set {%uuid of player%.pName} to text arg 2
+			send "&{@MainColor}&l{@Prefix}&{@MainColor}&l/party confirm to create the party!"
+			stop
+		if arg 1 is "confirm":
+			if {%uuid of player%.creating} is not true:
+				send "&{@MainColor}&l{@Prefix}&lNothing to confirm!"
+				stop
+			party_create(player)
+			clear {%uuid of player%.creating}
+			delete {%uuid of player%.creating}
+			clear {%uuid of player%.pName}
+			delete {%uuid of player%.pName}
+			make console execute command "eco take %player% {@PartyCost-Create}"
+			send "&{@MainColor}&l{@Prefix}&lParty created!"
+			stop		
+		send "&{@MainColor}&l{@Prefix}&{@MainColor}&l/party help!"
+
+function party_create(p: player):
+	set {_uuid} to uuid of {_p}
+	set {%{_uuid}%.party} to {%{_uuid}%.pName}
+	add lowerCase({%{_uuid}%.party}) to {party.list::*}
+	add {_p} to {%{%{_uuid}%.party}%.members::*}
+	set {%{_uuid}%.rank} to "Leader"
+	
+	set {_name} to {%{_uuid}%.party}
+	set {%{_name}%.color} to "&{@MainColor}"
+	set {%{_name}%.description} to "Party!"
+	
+	set {_suffix} to "&8 [&{@MainColor}%{_name}%&8]"
+	make console execute command "nte player %{_p}% suffix %{_suffix}%"
+	
+function party_leave(p:player):
+	set {_uuid} to uuid of {_p}
+	if {%{_uuid}%.rank} is "Leader":
+		party_disband({_p})
+		stop
+	set {_party} to {%{_uuid}%.party}
+	remove {_p} from {%{_party}%.members::*}
+	clear {%{_uuid}%.party}
+	clear {%{_uuid}%.rank}
+	
+	make console execute command "nte player %{_p}% suffix &r"
+	
+function party_disband(p: player):
+	set {_uuid} to uuid of {_p}
+	set {_party} to {%{_uuid}%.party}
+	remove {_party} from {party.list::*}
+	loop {%{_party}%.members::*}:
+		set {_uuid} to uuid of loop-value
+		clear {%{_uuid}%.party}
+		clear {%{_uuid}%.rank}
+		clear {%{_uuid}%.nick}
+		make console execute command "nte player %loop-value% suffix &r"
+		clear {%{_party}%.members::*}
+		clear {%{_party}%.color}
+		clear {%{_partyName}%.home}
+		clear {%{_partyName}%.description}
+		remove lowerCase({_partyName}) from {party.list::*}
+on join:
+	set {_x} to player's prefix
+	replace all "&l" with "" in {_x}
+	make console execute command "nte player %player% prefix %{_x}%"
+on damage of player:
+	if {%uuid of attacker%.party} = {%uuid of victim%.party}:
+		cancel event
+function partyBroadcast(party: text, message: text):
+	loop all players in world "world":
+		if {%uuid of loop-value%.party} = {_party}:
+			send "%{_message}%" to loop-value
+		else:
+			if {%uuid of loop-value%.spy} is true:
+				set {_x} to "&7[SPY] %{_message}%"
+				replace all "&{@MainColor}" with "&7" in {_x}
+				replace all "{@Prefix}" with "&8[&7%{%uuid of loop-value%.party}%&8]" in {_x}
+				send "%{_x}%" to loop-value
+on script load:
+	set {_letters} to "Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz"
+	set {_letter-pairs::*} to {_letters} split at " "
+	loop {_letter-pairs::*}:
+		set {_pair::*} to loop-value split at ""
+		set {_uppercase} to {_pair::1}
+		set {_lowercase} to {_pair::2}
+		set {letters::uppercase::%{_lowercase}%} to {_uppercase}
+		set {letters::lowercase::%{_uppercase}%} to {_lowercase}
+	set {_x} to "0 1 2 3 4 5 6 7 8 9 a e b c d f"
+	set {colors::*} to {_x} split at " "
+		
+function lowerCase(text: text) :: text:
+	set {_characters::*} to {_text} split at ""
+	set {_new} to ""
+	loop {_characters::*}:
+		set {_char} to loop-value
+		set {_char} to {letters::lowercase::%loop-value%}
+		set {_new} to "%{_new}%%{_char}%"
+	return {_new}
+		
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

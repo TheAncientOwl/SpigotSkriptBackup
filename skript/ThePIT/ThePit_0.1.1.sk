@@ -1,0 +1,104 @@
+#Dev: Bufnita aka TheAncientOwl
+#Version: 0.1.1
+#-> Chat change - Join and equip players - Reload command <-#
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#                  ON					  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+on script load:
+	delete {START-KIT::*}
+	add unbreakable iron_chestplate to {START-KIT::1::*}
+	add unbreakable chain_leggings to {START-KIT::1::*}
+	add unbreakable chain_boots to {START-KIT::1::*}
+	add unbreakable chain_chestplate to {START-KIT::2::*}
+	add unbreakable iron_leggings to {START-KIT::2::*}
+	add unbreakable chain_boots to {START-KIT::2::*}
+	add unbreakable chain_chestplate to {START-KIT::3::*}
+	add unbreakable chain_leggings to {START-KIT::3::*}
+	add unbreakable iron_boots to {START-KIT::3::*}
+	
+on join:
+	pit_join(player)
+	
+on chat:
+	cancel event
+	set {_x} to "&7[&e{level}&7] {prefix}{player} &8&l- &7{message}"
+	replace all "{level}" with "%{pit.%uuid of player%.level}%" in {_x}
+	replace all "{player}" with "%player%" in {_x}
+	replace all "{prefix}" with player's prefix in {_x}			
+	replace all "&" with " " in message	
+	replace all "{message}" with message in {_x} 	
+	broadcast "%{_x}%"
+
+	
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#              FUNCTIONS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+
+#->JOIN FUNCTIONS
+function pit_join(p: player):
+	set {_uuid} to uuid of {_p}
+	teleport {_p} to {pit.spawn}
+	if {pit.%{_uuid}%.level} is not set:
+		set {pit.%{_uuid}%.level} to 1
+	if {pit.%{_uuid}%.xp} is not set:
+		set {pit.%{_uuid}%.xp} to 0		
+	if {pit.%{_uuid}%.xp-need} is not set:
+		set {pit.%{_uuid}%.xp-need} to 100	
+	if {pit.%{_uuid}%.gold} is not set:
+		set {pit.%{_uuid}%.gold} to 0	
+	set {pit.%{_uuid}%.streak} to 0
+	set {pit.%{_uuid}%.status} to "&aIdling"
+	pit_clear({_p})
+	pit_equip({_p})
+function pit_clear(p: player):	
+	clear {_p}'s inventory
+	clear {_p}'s level
+	remove all effects from {_p}
+function armor_equip(p: player, x: integer):
+	set {_p}'s chestplate to {START-KIT::%{_x}%::1}
+	set {_p}'s leggings to {START-KIT::%{_x}%::2}
+	set {_p}'s boots to {START-KIT::%{_x}%::3}
+function pit_equip(p: player):
+	set {_uuid} to uuid of {_p}
+	set {_p}'s level to {pit.%{_uuid}%.level}
+	wait 0.5 seconds
+	set slot 0 of {_p} to unbreakable iron_sword
+	set slot 1 of {_p} to unbreakable bow
+	set slot 8 of {_p} to 30 arrows
+	wait 0.5 seconds
+	set {_rand} to random integer between 1 and 3
+	armor_equip({_p}, {_rand})
+#<- END OF JOIN FUNCTIONS
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#               COMMANDS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+command /pit [<text>]:
+	trigger:
+		if player have permission "pit.admin":
+			if arg-1 is "reload":
+				make player execute command "skript reload ThePit"
+				stop
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

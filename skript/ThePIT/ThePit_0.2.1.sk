@@ -1,0 +1,473 @@
+#Dev: Bufnita aka TheAncientOwl
+#Version: 0.2.1
+#-> Added some features like no hunger, eternal day, min level to use enderchest - Added combat features like kill, assist, xp<-#
+options:
+	prefix: &e&lThe PIT
+	error: &cSyntax error!
+	cmdPrefix: &8[&e&l!&8]&a/pit
+	cmdColor: &7
+	pn: &b<player> &3<number>
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#                  ON					  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+on script load:
+	delete {START-KIT::*}
+	add unbreakable iron_chestplate to {START-KIT::1::*}
+	add unbreakable chain_leggings to {START-KIT::1::*}
+	add unbreakable chain_boots to {START-KIT::1::*}
+	add unbreakable chain_chestplate to {START-KIT::2::*}
+	add unbreakable iron_leggings to {START-KIT::2::*}
+	add unbreakable chain_boots to {START-KIT::2::*}
+	add unbreakable chain_chestplate to {START-KIT::3::*}
+	add unbreakable chain_leggings to {START-KIT::3::*}
+	add unbreakable iron_boots to {START-KIT::3::*}
+	delete {PRESTIGES::*}
+	add "&9I","&9II","&9III","&9IV","&eV","&eVI","&eVII","&eVIII","&eIX","&6X","&6XI","&6XII","&6XIII","&6XIV","&cXV","&cXVI","&cXVII","&cXVIII","&cXIX","&6XX","&6XXI","&6XXII","&6XXIII","&6XXIV","&dXXV","&dXXVi","&dXXVII","&dXXVIII", "&dXXIX" and "&4MAX" to {PRESTIGES::*}
+on join:
+	pit_join(player)
+on quit:
+	delete stylish scoreboard "PIT-%player%"
+on chat:
+	cancel event
+	set {_x} to "{prestige_color}[{level_color}{level}{prestige_color}] {prefix}{player} &8&l- &7{message}"
+	replace all "{level_color}" with pit_get_color(player) in {_x} 
+	replace all "{prestige_color}" with pit_get_prestige_color(player) in {_x}
+	replace all "{level}" with "%{pit.%uuid of player%.level}%" in {_x}
+	replace all "{player}" with "%player%" in {_x}
+	replace all "{prefix}" with player's prefix in {_x}			
+	replace all "&" with " " in message	
+	replace all "{message}" with message in {_x} 	
+	broadcast "%{_x}%"
+at 18:00:
+	set time to 7:00
+on hunger bar change:
+	{pit.%uuid of player%.state} is "ingame"
+	cancel event		
+	set player's hunger to 20
+on pressure plate:
+	cancel event	
+	push the player upwards at speed 0.5
+	push the player forwards at speed 0.7
+on drop:
+	if player does not have permission "pit.admin":
+		cancel event
+on break:
+	if player does not have the permission "pit.admin":
+		event-block is not stationary_lava
+		cancel event
+on block flow:
+	if event-block is lava:
+		cancel event
+on place:
+	if player does not have permission "pit.admin":
+		cancel event
+on right click on ender_chest:
+	if {pit.%uuid of player%.level} < 15:
+		send "{@prefix} &cYou must have at least level &b15 &cto open it!"
+		cancel event
+# DEATH EVENTS
+on damage of player:
+	if damage cause is fall:
+		cancel event
+	if damage cause is void:
+		cancel event
+		kill victim
+	if attacker is player:
+		if attacker is not victim:
+			wait 1 tick
+			loop 20 times:
+				set {_health.%loop-integer%.%victim%} to "&7❤"
+				loop-integer is greater than max health of victim
+				set {_health.%loop-integer%.%victim%} to ""
+			loop rounded health of victim times:
+				set {_health.%loop-integer%.%victim%} to "&4❤"
+			set action bar of attacker to coloured "%{_health.1.%victim%}%%{_health.2.%victim%}%%{_health.3.%victim%}%%{_health.4.%victim%}%%{_health.5.%victim%}%%{_health.6.%victim%}%%{_health.7.%victim%}%%{_health.8.%victim%}%%{_health.9.%victim%}%%{_health.10.%victim%}%%{_health.11.%victim%}%%{_health.12.%victim%}%%{_health.13.%victim%}%%{_health.14.%victim%}%%{_health.15.%victim%}%%{_health.16.%victim%}%%{_health.17.%victim%}%%{_health.18.%victim%}%%{_health.19.%victim%}%%{_health.20.%victim%}%"
+			set {_sec.%uuid of victim%} to 10
+			set {_sec.%uuid of attacker%} to 10
+			if {pit.%uuid of victim%.status} is "&aIdling":
+				set {pit.%uuid of victim%.status} to "&cFighting"
+				pit_scoreboard(victim)
+				while {pit.%uuid of victim%.status} is "&cFighting":
+					remove 1 from {_sec.%uuid of victim%}
+					wait 1 seconds
+					if {_sec.%uuid of victim%} is 0:
+						set {pit.%uuid of victim%.status} to "&aIdling"
+						pit_scoreboard(victim)
+			if {pit.%uuid of attacker%.status} is "&aIdling":
+				set {pit.%uuid of attacker%.status} to "&cFighting"
+				pit_scoreboard(attacker)
+				while {pit.%uuid of attacker%.status} is "&cFighting":
+					remove 1 from {_sec.%uuid of attacker%}
+					wait 1 seconds
+					if {_sec.%uuid of attacker%} is 0:
+						set {pit.%uuid of attacker%.status} to "&aIdling"
+						pit_scoreboard(attacker)
+			set {_dmg} to damage
+			add rounded {_dmg} to {pit.%uuid of victim%.damage::%uuid of attacker%} 
+			if {pit.%uuid of victim%.damage::%uuid of attacker%}  > 10:
+				set metadata value "ASSIST" of victim to attacker
+				delete {pit.%uuid of victim%.damage::%uuid of attacker%} 
+				while {_sec.assist.%uuid of victim%} > 1:
+					remove 1 from {_sec.assist.%uuid of victim%}
+					wait 1 seconds
+					{_sec.assist.%uuid of victim%} = 1:
+						delete metadata value "ASSIST" of victim
+on death of player:
+	play sound "ENTITY_EXPERIENCE_ORB_PICKUP" to attacker with volume 100 and pitch 100
+	set death message to ""
+	clear drops
+	if metadata value "ASSIST" of victim is set:
+		set {_G} to metadata value "ASSIST" of victim
+		if {_G} is not attacker:
+			set {_uuid} to uuid of {_G}
+			set {_x} to "&3&lAssist! &8on {prestige}[{color}{level}{prestige}]{prefix}{player}&8&l!"
+			replace all "{prestige}" with pit_get_prestige_color(victim) in {_x}
+			replace all "{color}" with pit_get_color(victim) in {_x}
+			replace all "{level}" with "%{pit.%uuid of victim%.level}%" in {_x}
+			replace all "{prefix}" with victim's prefix in {_x}
+			replace all "{player}" with "%victim%" in {_x}
+			remove 5 from {pit.%{_uuid}%.xp-need}	
+			send "{@prefix} %{_x}%" to {_G}
+			pit_scoreboard({_G})
+			delete metadata value "ASSIST" of victim
+	add 1 to {pit.%uuid of attacker%.streak}
+	if {pit.%uuid of attacker%.streak} mod 5 = 0:
+		broadcast "{@prefix} &3KillStreak &8of &c&l%{pit.%uuid of attacker%.streak}% &8by &c%attacker%&8&l!"
+	remove 15 from {pit.%uuid of attacker%.xp-need}
+	set {pit.%uuid of victim%.streak} to 0
+	send victim title "&c&lYOU DIED!" with subtitle "&7Muhahahahah!" for 0.6 seconds
+	wait 0.6 seconds
+	force victim to respawn
+	wait 0.2 seconds
+	set {pit.%uuid of victim%.status} to "&aIdling"
+	set action bar of attacker to coloured "&7&l%victim% &4&lKILL!"		
+	wait 0.2 seconds	
+	pit_equip(victim)
+	pit_scoreboard(victim)
+	set {_x} to "&4&lKill! &8on {prestige}[{color}{level}{prestige}]{prefix}{player}&8&l!"
+	replace all "{prestige}" with pit_get_prestige_color(victim) in {_x}
+	replace all "{color}" with pit_get_color(victim) in {_x}
+	replace all "{level}" with "%{pit.%uuid of victim%.level}%" in {_x}
+	replace all "{prefix}" with victim's prefix in {_x}
+	replace all "{player}" with "%victim%" in {_x}
+	send "{@prefix} %{_x}%" to attacker
+	add 15 to {pit.%uuid of attacker%.gold}
+	#pit_give_gp(attacker)
+	pit_scoreboard(attacker)
+	if {pit.%uuid of attacker%.level} < 120:
+		pit_check_level(attacker)
+	
+function pit_check_level(p: player):	
+	set {_uuid} to uuid of {_p}
+	if {pit.%{_uuid}%.xp-need} <= 0:   
+		set {_old} to "{prestige}[{color}{level}{prestige}]"
+		replace all "{prestige}" with pit_get_prestige_color({_p}) in {_old}
+		replace all "{color}" with pit_get_color({_p}) in {_old}
+		replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_old}
+		add 1 to {pit.%{_uuid}%.level}
+		send "{@prefix} &3&lLevel Up!" to {_p}
+		set {_x} to "&3&lLEVEL UP!"
+		set {_y} to "{old} &8&l-> {new}"
+		replace all "{old}" with "%{_old}%" in {_y}	
+		set {_new} to "{prestige}[{color}{level}{prestige}]"
+		replace all "{prestige}" with pit_get_prestige_color({_p}) in {_new}
+		replace all "{color}" with pit_get_color({_p}) in {_new}
+		replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_new}
+		replace all "{new}" with "%{_new}%" in {_y}		
+		send {_p} title "%{_x}%" with subtitle "%{_y}%" for 3 seconds
+		play sound "ENTITY_ENDERDRAGON_SHOOT" to {_p} with volume 100 and pitch 100
+		set {_p}'s level to {pit.%{_uuid}%.level}
+		if {pit.%{_uuid}%.level} > 1:
+			set {pit.%{_uuid}%.xp-need} to 100*{pit.%{_uuid}%.level}
+		else:
+			add 100 to {pit.%{_uuid}%.xp-need}	
+		pit_nametag({_p})
+		pit_scoreboard({_p})
+	
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#              FUNCTIONS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#->JOIN FUNCTIONS
+function pit_join(p: player):
+	set {_uuid} to uuid of {_p}
+	teleport {_p} to {pit.spawn}
+	if {pit.%{_uuid}%.level} is not set:
+		set {pit.%{_uuid}%.level} to 1
+	if {pit.%{_uuid}%.prestige} is not set:
+		set {pit.%{_uuid}%.prestige} to 0	
+	if {pit.%{_uuid}%.xp-need} is not set:
+		set {pit.%{_uuid}%.xp-need} to 100	
+	if {pit.%{_uuid}%.gold} is not set:
+		set {pit.%{_uuid}%.gold} to 0	
+	set {pit.%{_uuid}%.streak} to 0
+	set {pit.%{_uuid}%.status} to "&aIdling"
+	pit_clear({_p})
+	pit_equip({_p})
+	pit_nametag({_p})
+	pit_scoreboard({_p})
+	
+function pit_clear(p: player):	
+	clear {_p}'s inventory
+	clear {_p}'s level
+	remove all effects from {_p}
+	
+function armor_equip(p: player, x: integer):
+	set {_p}'s chestplate to {START-KIT::%{_x}%::1}
+	set {_p}'s leggings to {START-KIT::%{_x}%::2}
+	set {_p}'s boots to {START-KIT::%{_x}%::3}
+	
+function pit_equip(p: player):
+	set {_uuid} to uuid of {_p}
+	set {_p}'s level to {pit.%{_uuid}%.level}
+	wait 0.5 seconds
+	set slot 0 of {_p} to unbreakable iron_sword
+	set slot 1 of {_p} to unbreakable bow
+	set slot 8 of {_p} to 30 arrows
+	wait 0.5 seconds
+	set {_rand} to random integer between 1 and 3
+	armor_equip({_p}, {_rand})
+#<- END OF JOIN FUNCTIONS
+
+#->COLOR FUNCTIONS
+function pit_get_color(p: player) :: string:
+	set {_uuid} to uuid of {_p}
+	set {_level} to "%{pit.%{_uuid}%.level}%" parsed as integer
+	if {_level} <= 9:
+		return "&7"
+	if {_level} <=19:
+		return "&1"
+	if {_level} <=29:
+		return "&3"
+	if {_level} <=39:
+		return "&2"
+	if {_level} <=49:
+		return "&a"
+	if {_level} <=59:
+		return "&e"
+	if {_level} <=69:
+		return "&6&l"
+	if {_level} <=79:
+		return "&c&l"
+	if {_level} <=89:
+		return "&4&l"
+	if {_level} <=99:
+		return "&5&l"
+	if {_level} <=109:
+		return "&d&l"
+	if {_level} <=119:
+		return "&f&l"
+	if {_level} = 120:
+		return "&b&l"
+function pit_get_prestige_color(p: player) :: string:
+	set {_uuid} to uuid of {_p}
+	set {_prestige} to "%{pit.%{_uuid}%.prestige}%" parsed as integer
+	if {_prestige} = 0:
+		return "&7"
+	if {_prestige} <= 4:
+		return "&9"
+	if {_prestige} <= 9:
+		return "&e"
+	if {_prestige} <=14:
+		return "&6"
+	if {_prestige} <=19:
+		return "&c"
+	if {_prestige} <=24:
+		return "&5"
+	if {_prestige} = 30:
+		return "&4"
+	return "&d"
+#<- END OF COLOR FUNCTIONS
+
+#->NAMETAG FUNCTIONS
+function pit_nametag(p: player):
+	set {_nametag} to "{prestige_color}[{level_color}{level}{prestige_color}] {prefix}"
+	replace all "{prestige_color}" with pit_get_prestige_color({_p}) in {_nametag}
+	replace all "{level_color}" with pit_get_color({_p}) in {_nametag}
+	set {_uuid} to uuid of {_p}
+	replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_nametag}
+	replace all "{prefix}" with {_p}'s prefix in {_nametag}
+	make console execute command "nte player %{_p}% prefix %{_nametag}%"
+#<-END OF NAMETAG FUNCTIONS
+
+#->SCOREBOARD FUNCTIONS
+function pit_scoreboard(p: player):
+	set {_uuid} to uuid of {_p}
+	set {_prestige} to {pit.%{_uuid}%.prestige}
+	if stylish scoreboard "Pit-%{_p}%" does not exist:
+		create new stylish scoreboard named "PIT-%{_p}%"
+		if {_prestige} is 0:
+			set {_lines} to 10
+		else:
+			set {_lines} to 11
+		loop {_lines} times:
+			create a new id based score "PIT-%{_p}%Slot%loop-number%" with text "&%loop-number%" slot loop-number for stylish scoreboard "PIT-%{_p}%"
+	set stylish scoreboard of {_p} to "PIT-%{_p}%"				
+	set title of stylish scoreboard "PIT-%{_p}%" to "&e&l The Atlantis PIT "
+	if {_prestige} is 0:
+		set the text of id "PIT-%{_p}%Slot10" to "&7%now%"
+		set the text of id "PIT-%{_p}%Slot9" to "&e"
+		set {_x} to "{prestige_color}[{level_color}{level}{prestige_color}]"
+		replace all "{prestige_color}" with pit_get_prestige_color({_p}) in {_x}
+		replace all "{level_color}" with pit_get_color({_p}) in {_x}
+		replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_x}
+		set the text of id "PIT-%{_p}%Slot8" to "&fLevel: %{_x}%"
+		set the text of id "PIT-%{_p}%Slot7" to "&fNeeded XP: &b%{pit.%{_uuid}%.xp-need}%"
+		set the text of id "PIT-%{_p}%Slot6" to "&d"
+		set the text of id "PIT-%{_p}%Slot5" to "&fStatus: %{pit.%{_uuid}%.status}%"
+		set the text of id "PIT-%{_p}%Slot4" to "&fGold: &6%{pit.%{_uuid}%.gold}%g"
+		set the text of id "PIT-%{_p}%Slot3" to "&fStreak: &a%{pit.%{_uuid}%.streak}%"
+		set the text of id "PIT-%{_p}%Slot2" to "&6"
+		set the text of id "PIT-%{_p}%Slot1" to "&emc.atlantis-nt.com"
+	else:
+		set the text of id "PIT-%{_p}%Slot11" to "&7%now%"
+		set the text of id "PIT-%{_p}%Slot10" to " "
+		set {_prestige} to {pit.%{_uuid}%.prestige}
+		set the text of id "PIT-%{_p}%Slot9" to "&fPrestige: %{PRESTIGES::%{_prestige}%}%"
+		set {_x} to "{prestige_color}[{level_color}{level}{prestige_color}]"
+		replace all "{prestige_color}" with pit_get_prestige_color({_p}) in {_x}
+		replace all "{level_color}" with pit_get_color({_p}) in {_x}
+		replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_x}
+		set the text of id "PIT-%{_p}%Slot8" to "&fLevel: %{_x}%"
+		set the text of id "PIT-%{_p}%Slot7" to "&fNeeded XP: &b%{pit.%{_uuid}%.xp-need}%"
+		set the text of id "PIT-%{_p}%Slot6" to "&d"
+		set the text of id "PIT-%{_p}%Slot5" to "&fStatus: %{pit.%{_uuid}%.status}%"
+		set the text of id "PIT-%{_p}%Slot4" to "&fGold: &6%{pit.%{_uuid}%.gold}%g"
+		set the text of id "PIT-%{_p}%Slot3" to "&fStreak: &a%{pit.%{_uuid}%.streak}%"
+		set the text of id "PIT-%{_p}%Slot2" to "&6"
+		set the text of id "PIT-%{_p}%Slot1" to "&emc.atlantis-nt.com"
+#<-END OF SCOREBOARD FUNCTIONS
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#               COMMANDS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+command /pit [<text>] [<player>] [<integer>]:
+	trigger:
+		if arg-1 is not set:
+			make player execute command "pit help"
+			stop
+		if arg-1 is "help":
+			send "&7&l&m------------------&r {@prefix} &7&l&m------------------"
+			send "{@cmdPrefix} {@cmdColor}spawn"
+			send "{@cmdPrefix} {@cmdColor}rankup &8( &eon level &b120&e, rankup to the next &bprestige&8 )"
+			if player have permission "pit.admin":
+				send "{@cmdPrefix} {@cmdColor}Reload"
+				send "{@cmdPrefix} {@cmdColor}AddGold {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetGold {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetLevel {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetPrestige {@pn}"
+			stop
+		if arg-1 is "spawn":
+			if {pit.%uuid of player%.status} is "&aIdling":
+				remove all golden_apple from player
+				remove all heads from player
+				teleport player to {pit.spawn}
+				stop
+			else:
+				send "{@prefix} &cYou are in fight!"
+				stop
+		if arg-1 is "rankup":
+			if {pit.%uuid of player%.level} is 120:
+				if {pit.%uuid of player%.prestige} >= 30:
+					send "{@prefix} &cYou are on &4Max &cprestige level!"
+					stop
+				else:
+					add 1 to {pit.%uuid of player%.prestige}
+					set {pit.%uuid of player%.level} to 1
+					set {pit.%uuid of arg-2%.xp-need} to 100*{pit.%uuid of arg-2%.level}
+					pit_nametag(player)
+					pit_scoreboard(player)
+					stop
+			else:
+				send "{@prefix} &cYou must have level &b120 &cto rankup!"
+				stop
+		if player have permission "pit.admin":
+			if arg-1 is "reload":
+				make player execute command "skript reload ThePit"
+				stop
+			if arg-1 is "setgold":
+				if arg-2 is set:
+					if arg-3 is set:
+						set {pit.%uuid of arg-2%.gold} to arg-3
+						send "{@prefix} &7Setted &6%arg-2%&7's gold to &6%arg-3%&7!"
+						pit_scoreboard(arg-2)
+						stop
+					else:
+						send "{@prefix} &cSyntax error!"
+						stop
+				else:
+					send "{@prefix} &cSyntax error!"
+					stop
+			if arg-1 is "addgold":
+				if arg-2 is set:
+					if arg-3 is set:
+						add arg-3 to {pit.%uuid of arg-2%.gold} 
+						send "{@prefix} &7Added &6%arg-3% &7gold to &6%arg-2%&7's gold!"
+						pit_scoreboard(arg-2)
+						stop
+					else:
+						send "{@prefix} {@error}"
+						stop
+				else:
+					send "{@prefix} {@error}"
+					stop
+			if arg-1 is "setlevel":
+				if arg-2 is set:
+					if arg-3 is set:
+						if arg-3 > 120:
+							send "{@prefix} &cMax level is &b120&c!"
+						else:
+							set {pit.%uuid of arg-2%.level} to arg-3
+							set {pit.%uuid of arg-2%.xp} to 0
+							set {pit.%uuid of arg-2%.xp-need} to 100*{pit.%uuid of arg-2%.level}
+							pit_nametag(arg-2)
+							pit_scoreboard(arg-2)
+							send "{@prefix} &7Setted &b%arg-2%&7's level to &b%arg-3%&7!"
+						stop
+					else:
+						send "{@prefix} {@error}"
+						stop
+				else:
+					send "{@prefix} {@error}"
+					stop
+			if arg-1 is "setprestige":
+				if arg-2 is set:
+					if arg-3 is set:
+						if arg-3 > 30:
+							send "{@prefix} &cMax prestige is &430&c!"
+						else:
+							set {pit.%uuid of arg-2%.prestige} to arg-3
+							pit_nametag(arg-2)
+							pit_scoreboard(arg-2)
+							send "{@prefix} &7Setted &b%arg-2%&7's prestige to &b%arg-3%&7!"
+						stop
+					else:
+						send "{@prefix} {@error}"
+						stop
+				else:
+					send "{@prefix} {@error}"
+					stop
+		
+		
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

@@ -1,0 +1,310 @@
+#Dev: Bufnita aka TheAncientOwl
+#Version: 0.1.4
+#-> Added set level - Added set prestige - Added set gold - Added add gold - Added help <-#
+options:
+	prefix: &e&lThe PIT
+	error: &cSyntax error!
+	cmdPrefix: &8[&e&l!&8]&a/pit
+	cmdColor: &7
+	pn: &b<player> &3<number>
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#                  ON					  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+on script load:
+	delete {START-KIT::*}
+	add unbreakable iron_chestplate to {START-KIT::1::*}
+	add unbreakable chain_leggings to {START-KIT::1::*}
+	add unbreakable chain_boots to {START-KIT::1::*}
+	add unbreakable chain_chestplate to {START-KIT::2::*}
+	add unbreakable iron_leggings to {START-KIT::2::*}
+	add unbreakable chain_boots to {START-KIT::2::*}
+	add unbreakable chain_chestplate to {START-KIT::3::*}
+	add unbreakable chain_leggings to {START-KIT::3::*}
+	add unbreakable iron_boots to {START-KIT::3::*}
+	delete {PRESTIGES::*}
+	add "&9I","&9II","&9III","&9IV","&eV","&eVI","&eVII","&eVIII","&eIX","&6X","&6XI","&6XII","&6XIII","&6XIV","&cXV","&cXVI","&cXVII","&cXVIII","&cXIX","&6XX","&6XXI","&6XXII","&6XXIII","&6XXIV","&dXXV","&dXXVi","&dXXVII","&dXXVIII" and "&dXXIX" to {PRESTIGES::*}
+on join:
+	pit_join(player)
+on quit:
+	delete stylish scoreboard "PIT-%player%"
+on chat:
+	cancel event
+	set {_x} to "{prestige_color}[{level_color}{level}{prestige_color}] {prefix}{player} &8&l- &7{message}"
+	replace all "{level_color}" with pit_get_color(player) in {_x} 
+	replace all "{prestige_color}" with pit_get_prestige_color(player) in {_x}
+	replace all "{level}" with "%{pit.%uuid of player%.level}%" in {_x}
+	replace all "{player}" with "%player%" in {_x}
+	replace all "{prefix}" with player's prefix in {_x}			
+	replace all "&" with " " in message	
+	replace all "{message}" with message in {_x} 	
+	broadcast "%{_x}%"
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#              FUNCTIONS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#->JOIN FUNCTIONS
+function pit_join(p: player):
+	set {_uuid} to uuid of {_p}
+	teleport {_p} to {pit.spawn}
+	if {pit.%{_uuid}%.level} is not set:
+		set {pit.%{_uuid}%.level} to 1
+	if {pit.%{_uuid}%.prestige} is not set:
+		set {pit.%{_uuid}%.prestige} to 0
+	if {pit.%{_uuid}%.xp} is not set:
+		set {pit.%{_uuid}%.xp} to 0		
+	if {pit.%{_uuid}%.xp-need} is not set:
+		set {pit.%{_uuid}%.xp-need} to 100	
+	if {pit.%{_uuid}%.gold} is not set:
+		set {pit.%{_uuid}%.gold} to 0	
+	set {pit.%{_uuid}%.streak} to 0
+	set {pit.%{_uuid}%.status} to "&aIdling"
+	pit_clear({_p})
+	pit_equip({_p})
+	pit_nametag({_p})
+	pit_scoreboard({_p})
+	
+function pit_clear(p: player):	
+	clear {_p}'s inventory
+	clear {_p}'s level
+	remove all effects from {_p}
+	
+function armor_equip(p: player, x: integer):
+	set {_p}'s chestplate to {START-KIT::%{_x}%::1}
+	set {_p}'s leggings to {START-KIT::%{_x}%::2}
+	set {_p}'s boots to {START-KIT::%{_x}%::3}
+	
+function pit_equip(p: player):
+	set {_uuid} to uuid of {_p}
+	set {_p}'s level to {pit.%{_uuid}%.level}
+	wait 0.5 seconds
+	set slot 0 of {_p} to unbreakable iron_sword
+	set slot 1 of {_p} to unbreakable bow
+	set slot 8 of {_p} to 30 arrows
+	wait 0.5 seconds
+	set {_rand} to random integer between 1 and 3
+	armor_equip({_p}, {_rand})
+#<- END OF JOIN FUNCTIONS
+
+#->COLOR FUNCTIONS
+function pit_get_color(p: player) :: string:
+	set {_uuid} to uuid of {_p}
+	set {_level} to "%{pit.%{_uuid}%.level}%" parsed as integer
+	if {_level} <= 9:
+		return "&7"
+	if {_level} <=19:
+		return "&1"
+	if {_level} <=29:
+		return "&3"
+	if {_level} <=39:
+		return "&2"
+	if {_level} <=49:
+		return "&a"
+	if {_level} <=59:
+		return "&e"
+	if {_level} <=69:
+		return "&6&l"
+	if {_level} <=79:
+		return "&c&l"
+	if {_level} <=89:
+		return "&4&l"
+	if {_level} <=99:
+		return "&5&l"
+	if {_level} <=109:
+		return "&d&l"
+	if {_level} <=119:
+		return "&f&l"
+	if {_level} = 120:
+		return "&b&l"
+function pit_get_prestige_color(p: player) :: string:
+	set {_uuid} to uuid of {_p}
+	set {_prestige} to "%{pit.%{_uuid}%.prestige}%" parsed as integer
+	if {_prestige} = 0:
+		return "&7"
+	if {_prestige} <= 4:
+		return "&9"
+	if {_prestige} <= 9:
+		return "&e"
+	if {_prestige} <=14:
+		return "&6"
+	if {_prestige} <=19:
+		return "&c"
+	if {_prestige} <=24:
+		return "&5"
+	return "&d"
+#<- END OF COLOR FUNCTIONS
+
+#->NAMETAG FUNCTIONS
+function pit_nametag(p: player):
+	set {_nametag} to "{prestige_color}[{level_color}{level}{prestige_color}] {prefix}"
+	replace all "{prestige_color}" with pit_get_prestige_color({_p}) in {_nametag}
+	replace all "{level_color}" with pit_get_color({_p}) in {_nametag}
+	set {_uuid} to uuid of {_p}
+	replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_nametag}
+	replace all "{prefix}" with {_p}'s prefix in {_nametag}
+	make console execute command "nte player %{_p}% prefix %{_nametag}%"
+#<-END OF NAMETAG FUNCTIONS
+
+#->SCOREBOARD FUNCTIONS
+function pit_scoreboard(p: player):
+	set {_uuid} to uuid of {_p}
+	set {_prestige} to {pit.%{_uuid}%.prestige}
+	if stylish scoreboard "Pit-%{_p}%" does not exist:
+		create new stylish scoreboard named "PIT-%{_p}%"
+		if {_prestige} is 0:
+			set {_lines} to 10
+		else:
+			set {_lines} to 11
+		loop {_lines} times:
+			create a new id based score "PIT-%{_p}%Slot%loop-number%" with text "&%loop-number%" slot loop-number for stylish scoreboard "PIT-%{_p}%"
+	set stylish scoreboard of {_p} to "PIT-%{_p}%"				
+	set title of stylish scoreboard "PIT-%{_p}%" to "&e&l The Atlantis PIT "
+	if {_prestige} is 0:
+		set the text of id "PIT-%{_p}%Slot10" to "&7%now%"
+		set the text of id "PIT-%{_p}%Slot9" to "&e"
+		set {_x} to "{prestige_color}[{level_color}{level}{prestige_color}]"
+		replace all "{prestige_color}" with pit_get_prestige_color({_p}) in {_x}
+		replace all "{level_color}" with pit_get_color({_p}) in {_x}
+		replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_x}
+		set the text of id "PIT-%{_p}%Slot8" to "&fLevel: %{_x}%"
+		set the text of id "PIT-%{_p}%Slot7" to "&fNeeded XP: &b%{pit.%{_uuid}%.xp-need}%"
+		set the text of id "PIT-%{_p}%Slot6" to "&d"
+		set the text of id "PIT-%{_p}%Slot5" to "&fStatus: %{pit.%{_uuid}%.status}%"
+		set the text of id "PIT-%{_p}%Slot4" to "&fGold: &6%{pit.%{_uuid}%.gold}%g"
+		set the text of id "PIT-%{_p}%Slot3" to "&fStreak: &a%{pit.%{_uuid}%.streak}%"
+		set the text of id "PIT-%{_p}%Slot2" to "&6"
+		set the text of id "PIT-%{_p}%Slot1" to "&emc.atlantis-nt.com"
+	else:
+		set the text of id "PIT-%{_p}%Slot11" to "&7%now%"
+		set the text of id "PIT-%{_p}%Slot10" to " "
+		set {_prestige} to {pit.%{_uuid}%.prestige}
+		set the text of id "PIT-%{_p}%Slot9" to "&fPrestige: %{PRESTIGES::%{_prestige}%}%"
+		set {_x} to "{prestige_color}[{level_color}{level}{prestige_color}]"
+		replace all "{prestige_color}" with pit_get_prestige_color({_p}) in {_x}
+		replace all "{level_color}" with pit_get_color({_p}) in {_x}
+		replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_x}
+		set the text of id "PIT-%{_p}%Slot8" to "&fLevel: %{_x}%"
+		set the text of id "PIT-%{_p}%Slot7" to "&fNeeded XP: &b%{pit.%{_uuid}%.xp-need}%"
+		set the text of id "PIT-%{_p}%Slot6" to "&d"
+		set the text of id "PIT-%{_p}%Slot5" to "&fStatus: %{pit.%{_uuid}%.status}%"
+		set the text of id "PIT-%{_p}%Slot4" to "&fGold: &6%{pit.%{_uuid}%.gold}%g"
+		set the text of id "PIT-%{_p}%Slot3" to "&fStreak: &a%{pit.%{_uuid}%.streak}%"
+		set the text of id "PIT-%{_p}%Slot2" to "&6"
+		set the text of id "PIT-%{_p}%Slot1" to "&emc.atlantis-nt.com"
+#<-END OF SCOREBOARD FUNCTIONS
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#               COMMANDS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+command /pit [<text>] [<player>] [<integer>]:
+	trigger:
+		if arg-1 is not set:
+			make player execute command "pit help"
+			stop
+		if arg-1 is "help":
+			send "&7&l&m------------------&r {@prefix} &7&l&m------------------"
+			send "{@cmdPrefix} {@cmdColor}spawn"
+			send "{@cmdPrefix} {@cmdColor}rankup &8( &eon level &b120&e, rankup to the next &bprestige&8 )"
+			if player have permission "pit.admin":
+				send "{@cmdPrefix} {@cmdColor}Reload"
+				send "{@cmdPrefix} {@cmdColor}SetSpawn"
+				send "{@cmdPrefix} {@cmdColor}AddGold {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetGold {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetLevel {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetPrestige {@pn}"
+		if player have permission "pit.admin":
+			if arg-1 is "reload":
+				make player execute command "skript reload ThePit"
+				stop
+			if arg-1 is "setspawn":
+				set {pit.spawn} to player's location
+				send "{@prefix} &7Spawn set!"
+				stop
+			if arg-1 is "setgold":
+				if arg-2 is set:
+					if arg-3 is set:
+						set {pit.%uuid of arg-2%.gold} to arg-3
+						send "{@prefix} &7Setted &6%arg-2%&7's gold to &6%arg-3%&7!"
+						pit_scoreboard(arg-2)
+						stop
+					else:
+						send "{@prefix} &cSyntax error!"
+						stop
+				else:
+					send "{@prefix} &cSyntax error!"
+					stop
+			if arg-1 is "addgold":
+				if arg-2 is set:
+					if arg-3 is set:
+						add arg-3 to {pit.%uuid of arg-2%.gold} 
+						send "{@prefix} &7Added &6%arg-3% &7gold to &6%arg-2%&7's gold!"
+						pit_scoreboard(arg-2)
+						stop
+					else:
+						send "{@prefix} {@error}"
+						stop
+				else:
+					send "{@prefix} {@error}"
+					stop
+			if arg-1 is "setlevel":
+				if arg-2 is set:
+					if arg-3 is set:
+						if arg-3 > 120:
+							send "{@prefix} &cMax level is &b120&c!"
+						else:
+							set {pit.%uuid of arg-2%.level} to arg-3
+							set {pit.%uuid of arg-2%.xp} to 0
+							set {pit.%uuid of arg-2%.xp-need} to 100*{pit.%uuid of arg-2%.level}
+							pit_nametag(arg-2)
+							pit_scoreboard(arg-2)
+							send "{@prefix} &7Setted &b%arg-2%&7's level to &b%arg-3%&7!"
+						stop
+					else:
+						send "{@prefix} {@error}"
+						stop
+				else:
+					send "{@prefix} {@error}"
+					stop
+			if arg-1 is "setprestige":
+				if arg-2 is set:
+					if arg-3 is set:
+						if arg-3 > 29:
+							send "{@prefix} &cMax prestige is &d29&c!"
+						else:
+							set {pit.%uuid of arg-2%.prestige} to arg-3
+							pit_nametag(arg-2)
+							pit_scoreboard(arg-2)
+							send "{@prefix} &7Setted &b%arg-2%&7's prestige to &b%arg-3%&7!"
+						stop
+					else:
+						send "{@prefix} {@error}"
+						stop
+				else:
+					send "{@prefix} {@error}"
+					stop
+				
+				
+		if arg-1 is "sc":
+			pit_scoreboard(arg-2)
+		
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

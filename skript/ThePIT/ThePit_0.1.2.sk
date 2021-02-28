@@ -1,0 +1,173 @@
+#Dev: Bufnita aka TheAncientOwl
+#Version: 0.1.2
+#-> New chat level color - Added nametags <-#
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#                  ON					  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+on script load:
+	delete {START-KIT::*}
+	add unbreakable iron_chestplate to {START-KIT::1::*}
+	add unbreakable chain_leggings to {START-KIT::1::*}
+	add unbreakable chain_boots to {START-KIT::1::*}
+	add unbreakable chain_chestplate to {START-KIT::2::*}
+	add unbreakable iron_leggings to {START-KIT::2::*}
+	add unbreakable chain_boots to {START-KIT::2::*}
+	add unbreakable chain_chestplate to {START-KIT::3::*}
+	add unbreakable chain_leggings to {START-KIT::3::*}
+	add unbreakable iron_boots to {START-KIT::3::*}
+	
+on join:
+	pit_join(player)
+	
+on chat:
+	cancel event
+	set {_x} to "{prestige_color}[{level_color}{level}{prestige_color}] {prefix}{player} &8&l- &7{message}"
+	replace all "{level_color}" with pit_get_color(player) in {_x} 
+	replace all "{prestige_color}" with pit_get_prestige_color(player) in {_x}
+	replace all "{level}" with "%{pit.%uuid of player%.level}%" in {_x}
+	replace all "{player}" with "%player%" in {_x}
+	replace all "{prefix}" with player's prefix in {_x}			
+	replace all "&" with " " in message	
+	replace all "{message}" with message in {_x} 	
+	broadcast "%{_x}%"
+
+	
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#              FUNCTIONS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+
+#->JOIN FUNCTIONS
+function pit_join(p: player):
+	set {_uuid} to uuid of {_p}
+	teleport {_p} to {pit.spawn}
+	if {pit.%{_uuid}%.level} is not set:
+		set {pit.%{_uuid}%.level} to 1
+	if {pit.%{_uuid}%.prestige} is not set:
+		set {pit.%{_uuid}%.prestige} to 0
+	if {pit.%{_uuid}%.xp} is not set:
+		set {pit.%{_uuid}%.xp} to 0		
+	if {pit.%{_uuid}%.xp-need} is not set:
+		set {pit.%{_uuid}%.xp-need} to 100	
+	if {pit.%{_uuid}%.gold} is not set:
+		set {pit.%{_uuid}%.gold} to 0	
+	set {pit.%{_uuid}%.streak} to 0
+	set {pit.%{_uuid}%.status} to "&aIdling"
+	pit_clear({_p})
+	pit_equip({_p})
+	pit_nametag({_p})
+	
+function pit_clear(p: player):	
+	clear {_p}'s inventory
+	clear {_p}'s level
+	remove all effects from {_p}
+	
+function armor_equip(p: player, x: integer):
+	set {_p}'s chestplate to {START-KIT::%{_x}%::1}
+	set {_p}'s leggings to {START-KIT::%{_x}%::2}
+	set {_p}'s boots to {START-KIT::%{_x}%::3}
+	
+function pit_equip(p: player):
+	set {_uuid} to uuid of {_p}
+	set {_p}'s level to {pit.%{_uuid}%.level}
+	wait 0.5 seconds
+	set slot 0 of {_p} to unbreakable iron_sword
+	set slot 1 of {_p} to unbreakable bow
+	set slot 8 of {_p} to 30 arrows
+	wait 0.5 seconds
+	set {_rand} to random integer between 1 and 3
+	armor_equip({_p}, {_rand})
+#<- END OF JOIN FUNCTIONS
+
+#->COLOR FUNCTIONS
+function pit_get_color(p: player) :: string:
+	set {_uuid} to uuid of {_p}
+	set {_level} to "%{pit.%{_uuid}%.level}%" parsed as integer
+	if {_level} <= 9:
+		return "&7"
+	if {_level} <=19:
+		return "&1"
+	if {_level} <=29:
+		return "&3"
+	if {_level} <=39:
+		return "&2"
+	if {_level} <=49:
+		return "&a"
+	if {_level} <=59:
+		return "&e"
+	if {_level} <=69:
+		return "&6&l"
+	if {_level} <=79:
+		return "&c&l"
+	if {_level} <=89:
+		return "&4&l"
+	if {_level} <=99:
+		return "&5&l"
+	if {_level} <=109:
+		return "&d&l"
+	if {_level} <=119:
+		return "&f&l"
+	if {_level} = 120:
+		return "&b&l"
+function pit_get_prestige_color(p: player) :: string:
+	set {_uuid} to uuid of {_p}
+	set {_prestige} to "%{pit.%{_uuid}%.prestige}%" parsed as integer
+	if {_prestige} = 0:
+		return "&7"
+	if {_prestige} <= 4:
+		return "&9"
+	if {_prestige} <= 9:
+		return "e"
+	if {_prestige} <=14:
+		return "&6"
+	if {_prestige} <=19:
+		return "&c"
+	if {_prestige} <=24:
+		return "&5"
+	return "&d"
+#<- END OF COLOR FUNCTIONS
+
+#->NAMETAG FUNCTIONS
+function pit_nametag(p: player):
+	set {_nametag} to "{prestige_color}[{level_color}{level}{prestige_color}]{prefix}"
+	replace all "{prestige_color}" with pit_get_prestige_color({_p}) in {_nametag}
+	replace all "{level_color}" with pit_get_color({_p}) in {_nametag}
+	set {_uuid} to uuid of {_p}
+	replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_nametag}
+	replace all "{prefix}" with {_p}'s prefix in {_nametag}
+	make console execute command "nte player %{_p}% prefix %{_nametag}%"
+#<-END OF NAMETAG FUNCTIONS
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#               COMMANDS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+command /pit [<text>] [<player>]:
+	trigger:
+		if player have permission "pit.admin":
+			if arg-1 is "reload":
+				make player execute command "skript reload ThePit"
+				stop
+		
+		
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
